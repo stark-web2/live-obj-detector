@@ -7,7 +7,6 @@ import os
 
 st.set_page_config(page_title="Live Object Detection & Tracing", layout="wide")
 
-# UI Styling
 st.markdown("""
 <style>
 body {
@@ -34,11 +33,19 @@ model = load_model()
 st.sidebar.header("⚙️ Controls")
 
 conf = st.sidebar.slider("Confidence Threshold", 0.1, 1.0, 0.5)
-run = st.sidebar.checkbox("Start Camera")
-
 alert_object = st.sidebar.text_input("🔔 Alert Object")
 save_frames = st.sidebar.checkbox("💾 Save Frames")
 show_logs = st.sidebar.checkbox("📝 Show Detection Log")
+
+# CAMERA CONTROL BUTTON (NEW)
+if "camera_on" not in st.session_state:
+    st.session_state.camera_on = False
+
+if st.sidebar.button("📷 Request Camera Access / Start"):
+    st.session_state.camera_on = True
+
+if st.sidebar.button("🛑 Stop Camera"):
+    st.session_state.camera_on = False
 
 # Variables
 object_counts = defaultdict(int)
@@ -46,40 +53,38 @@ tracked_ids = set()
 detection_log = []
 saved_images = []
 
-# Create folder
 if not os.path.exists("saved_frames"):
     os.makedirs("saved_frames")
 
-# UI placeholders
 frame_placeholder = st.empty()
 status_text = st.empty()
 fps_text = st.empty()
 
-# SESSION STATE FIX (prevents re-opening camera endlessly)
+# CAMERA STATE
 if "camera" not in st.session_state:
     st.session_state.camera = None
 
-# CAMERA START
-if run:
+# START CAMERA
+if st.session_state.camera_on:
 
-    status_text.success("📷 Camera running...")
+    status_text.success("📷 Camera starting... Please allow permission in browser popup.")
 
-    # Open camera ONLY ONCE
+    # Open camera only once
     if st.session_state.camera is None:
         st.session_state.camera = cv2.VideoCapture(0)
 
     camera = st.session_state.camera
 
     if not camera.isOpened():
-        st.error("❌ Camera not accessible. Check browser permissions.")
+        st.error("❌ Camera not accessible. Click 'Allow' in your browser popup and refresh.")
         st.stop()
 
     prev_time = time.time()
     frame_count = 0
 
-    while run:
-        ret, frame = camera.read()
+    while st.session_state.camera_on:
 
+        ret, frame = camera.read()
         if not ret:
             st.error("❌ Camera not detected")
             break
@@ -113,7 +118,6 @@ if run:
                     2
                 )
 
-                # ALERT SYSTEM
                 if alert_object and label.lower() == alert_object.lower():
                     st.warning(f"⚠️ ALERT: {label} detected!")
 
@@ -127,18 +131,16 @@ if run:
             cv2.imwrite(filename, annotated)
             saved_images.append(filename)
 
-        # Display frame
+        # Display
         frame_placeholder.image(annotated, channels="BGR")
-
         fps_text.markdown(f"### ⚡ FPS: {fps:.2f}")
 
     camera.release()
     st.session_state.camera = None
 
 else:
-    status_text.warning("⚠️ Camera OFF")
+    status_text.warning("⚠️ Camera OFF (Click 'Request Camera Access / Start')")
 
-    # release camera if stopped
     if st.session_state.camera is not None:
         st.session_state.camera.release()
         st.session_state.camera = None
