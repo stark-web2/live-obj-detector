@@ -1,9 +1,3 @@
-streamlit
 streamlit-webrtc
-av
-ultralytics
-opencv-python-headless
-numpy
-torch
-torchvision
 tornado==6.4.2
+opencv-python-headless
