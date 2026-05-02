@@ -1,16 +1,16 @@
 import streamlit as st
 from streamlit_webrtc import webrtc_streamer, VideoTransformerBase
-import av
 import cv2
+import time
 from ultralytics import YOLO
 from collections import defaultdict
-import time
 
-st.set_page_config(page_title="YOLO Live Camera", layout="wide")
+st.set_page_config(page_title="Live Object Detection & Tracing", layout="wide")
 
-st.title("🎥 Live Object Detection & Tracing (WebRTC FIXED)")
+st.title("🎥 Live Object Detection & Tracing")
+st.markdown("### 🚀 AI-Powered Real-Time Detection System")
 
-# Load YOLO model
+# Load model
 @st.cache_resource
 def load_model():
     return YOLO("yolov8n.pt")
@@ -22,18 +22,19 @@ st.sidebar.header("⚙️ Controls")
 conf = st.sidebar.slider("Confidence Threshold", 0.1, 1.0, 0.5)
 alert_object = st.sidebar.text_input("🔔 Alert Object")
 
-object_counts = defaultdict(int)
+# Logs
 detection_log = []
 
-# ---------------------------
-# YOLO Video Transformer
-# ---------------------------
-class YOLOTransformer(VideoTransformerBase):
-    def transform(self, frame: av.VideoFrame):
+# Object detection counter
+object_counts = defaultdict(int)
 
+# -----------------------------
+# VIDEO PROCESSING CLASS
+# -----------------------------
+class YOLOStream(VideoTransformerBase):
+    def transform(self, frame):
         img = frame.to_ndarray(format="bgr24")
 
-        # YOLO inference
         results = model.track(img, persist=True, conf=conf)
         annotated = img.copy()
 
@@ -44,19 +45,17 @@ class YOLOTransformer(VideoTransformerBase):
                 conf_score = float(box.conf[0])
                 label = model.names[cls]
 
-                # Draw box
-                cv2.rectangle(annotated, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                cv2.rectangle(annotated, (x1, y1), (x2, y2), (0,255,0), 2)
                 cv2.putText(
                     annotated,
                     f"{label} {conf_score:.2f}",
                     (x1, y1 - 10),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.5,
-                    (0, 255, 0),
+                    (0,255,0),
                     2
                 )
 
-                # Alert system
                 if alert_object and label.lower() == alert_object.lower():
                     cv2.putText(
                         annotated,
@@ -68,16 +67,15 @@ class YOLOTransformer(VideoTransformerBase):
                         3
                     )
 
-                detection_log.append(
-                    f"{time.strftime('%H:%M:%S')} - {label} ({conf_score:.2f})"
-                )
-
         return annotated
 
 
+# -----------------------------
+#
+# -----------------------------
 webrtc_streamer(
-    key="yolo-camera",
-    video_transformer_factory=YOLOTransformer,
+    key="camera",
+    video_transformer_factory=YOLOStream,
     media_stream_constraints={
         "video": True,
         "audio": False
