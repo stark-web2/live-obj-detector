@@ -1,9 +1,8 @@
-streamlit
-streamlit-webrtc
-ultralytics
-opencv-python-headless
-numpy
-torch
-torchvision
-av
-tornado==6.4.2
+streamlit==1.28.1
+ultralytics==8.0.196
+opencv-python-headless==4.8.1.78
+numpy==1.24.3
+streamlit-webrtc==0.7.2
+av==10.0.0
+pyaudio==0.2.11
+webrtcvad==2.0.10
